@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
 	"github.com/mh-airlines/afs-engine/internal/config"
 	"github.com/mh-airlines/afs-engine/internal/models"
 	"github.com/mh-airlines/afs-engine/internal/utils"
@@ -55,7 +54,13 @@ func (g *AFSGenerator) GenerateAFS(ctx context.Context, targetDate *time.Time) (
 	stats.MFSRecordsQueried = len(mfsRecords)
 	log.WithField("count", len(mfsRecords)).Info("Found valid MFS records")
 
-	// Phase 2: Process each MFS record
+	// Phase 2: Query codeshares for all MFS records
+	mfsRecords, err = g.attachCodeshares(ctx, mfsRecords, flightDate)
+	if err != nil {
+		log.WithError(err).Warn("Failed to attach codeshares, continuing without them")
+	}
+
+	// Phase 3: Process each MFS record
 	for _, mfs := range mfsRecords {
 		afsRecords := g.expandMFSToAFS(mfs, flightDate)
 
@@ -115,6 +120,72 @@ func (g *AFSGenerator) queryValidMFS(ctx context.Context, targetDate time.Time) 
 	return validRecords, nil
 }
 
+// attachCodeshares queries and attaches codeshare information to MFS records
+func (g *AFSGenerator) attachCodeshares(ctx context.Context, mfsRecords []models.MasterFlight, flightDate time.Time) ([]models.MasterFlight, error) {
+	if len(mfsRecords) == 0 {
+		return mfsRecords, nil
+	}
+
+	// Collect all MFS IDs
+	mfsIDs := make([]primitive.ObjectID, len(mfsRecords))
+	for i, mfs := range mfsRecords {
+		mfsIDs[i] = mfs.ID
+	}
+
+	// Query all codeshares for these MFS records
+	collection := g.db.GetCollection("codeshares")
+	filter := bson.M{
+		"masterflightRef": bson.M{"$in": mfsIDs},
+		"csStartDate":     bson.M{"$lte": flightDate},
+		"csEndDate":       bson.M{"$gte": flightDate},
+	}
+
+	cursor, err := collection.Find(ctx, filter)
+	if err != nil {
+		return mfsRecords, err
+	}
+	defer cursor.Close(ctx)
+
+	var codeshares []models.Codeshare
+	if err := cursor.All(ctx, &codeshares); err != nil {
+		return mfsRecords, err
+	}
+
+	// Filter codeshares by frequency and organize by MFS ID
+	codeshareMap := make(map[primitive.ObjectID][]models.Codeshare)
+	for _, cs := range codeshares {
+		if utils.MatchesFrequency(flightDate, cs.Frequency, cs.CSStartDate) {
+			codeshareMap[cs.MasterFlightRef] = append(codeshareMap[cs.MasterFlightRef], cs)
+		}
+	}
+
+	// Attach codeshares to their corresponding MFS records
+	for i := range mfsRecords {
+		if codeshares, found := codeshareMap[mfsRecords[i].ID]; found {
+			mfsRecords[i].Codeshares = codeshares
+			log.WithFields(log.Fields{
+				"flightNo":       mfsRecords[i].FlightNo,
+				"codeshareCount": len(codeshares),
+			}).Debug("Attached codeshares to MFS")
+		}
+	}
+
+	return mfsRecords, nil
+}
+
+// findMatchingCodeshares finds codeshares that match the given sector
+func (g *AFSGenerator) findMatchingCodeshares(codeshares []models.Codeshare, sector string) []string {
+	var matchingFlights []string
+	
+	for _, cs := range codeshares {
+		if cs.Sector == sector {
+			matchingFlights = append(matchingFlights, cs.CodeshareFlightNo...)
+		}
+	}
+	
+	return matchingFlights
+}
+
 // expandMFSToAFS expands MFS record into AFS records (one per leg)
 func (g *AFSGenerator) expandMFSToAFS(mfs models.MasterFlight, flightDate time.Time) []models.ActiveFlight {
 	var afsRecords []models.ActiveFlight
@@ -124,6 +195,12 @@ func (g *AFSGenerator) expandMFSToAFS(mfs models.MasterFlight, flightDate time.T
 
 		expiryDate := utils.CalculateExpiryDate(flightDate, g.config.Storage.AFSTTLDays)
 		now := time.Now()
+
+		// Build sector string for this leg
+		sector := fmt.Sprintf("%s %s", station.DepartureStation, station.ArrivalStation)
+		
+		// Find matching codeshare flights for this leg
+		codeshareFlights := g.findMatchingCodeshares(mfs.Codeshares, sector)
 
 		afs := models.ActiveFlight{
 			ID:                       afsObjectID,
@@ -148,6 +225,7 @@ func (g *AFSGenerator) expandMFSToAFS(mfs models.MasterFlight, flightDate time.T
 			AircraftConfiguration:    station.AircraftConfiguration,
 			ServiceType:              mfs.IATAServiceType,
 			OnwardFlight:             station.OnwardFlight,
+			CodeshareFlights:         codeshareFlights,
 			SourceMFSID:              mfs.ID,
 			SeasonID:                 mfs.SeasonID,
 			ItineraryVarID:           mfs.ItineraryVarID,
@@ -196,6 +274,7 @@ func (g *AFSGenerator) upsertAFS(ctx context.Context, afs models.ActiveFlight) e
 			"aircraftConfiguration":    afs.AircraftConfiguration,
 			"serviceType":              afs.ServiceType,
 			"onwardFlight":             afs.OnwardFlight,
+			"codeshareFlights":         afs.CodeshareFlights,
 			"sourceMFSId":              afs.SourceMFSID,
 			"seasonId":                 afs.SeasonID,
 			"itineraryVarId":           afs.ItineraryVarID,

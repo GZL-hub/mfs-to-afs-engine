@@ -28,6 +28,26 @@ type MasterFlight struct {
 	MessageType       string             `bson:"MessageType"`
 	IsAdhoc           bool               `bson:"isAdhoc"`
 	SourceTracking    SourceTracking     `bson:"sourceTracking"`
+	Codeshares        []Codeshare        `bson:"-"` // Not stored in MFS, populated from codeshares collection
+}
+
+// Codeshare represents a codeshare flight record
+type Codeshare struct {
+	ID                primitive.ObjectID `bson:"_id,omitempty"`
+	MasterFlightRef   primitive.ObjectID `bson:"masterflightRef"`
+	CSFSKey           string             `bson:"csfsKey"`
+	SeasonID          string             `bson:"seasonId"`
+	FlightOwner       string             `bson:"flightOwner"`
+	FlightNo          string             `bson:"flightNo"`
+	CSStartDate       time.Time          `bson:"csStartDate"`
+	CSEndDate         time.Time          `bson:"csEndDate"`
+	Frequency         string             `bson:"frequency"`
+	FreqRate          string             `bson:"freqRate"`
+	CodeshareFlightNo []string           `bson:"codeshareFlightNo"`
+	Sector            string             `bson:"sector"`
+	SourceTracking    SourceTracking     `bson:"sourceTracking"`
+	CreatedAt         time.Time          `bson:"createdAt"`
+	UpdatedAt         time.Time          `bson:"updatedAt"`
 }
 
 // Station represents a flight leg
@@ -96,6 +116,7 @@ type ActiveFlight struct {
 	AircraftConfiguration    string             `bson:"aircraftConfiguration"`
 	ServiceType              string             `bson:"serviceType"`
 	OnwardFlight             string             `bson:"onwardFlight"`
+	CodeshareFlights         []string           `bson:"codeshareFlights,omitempty"` // NEW: Array of codeshare flight numbers
 	SourceMFSID              primitive.ObjectID `bson:"sourceMFSId"`
 	SeasonID                 string             `bson:"seasonId"`
 	ItineraryVarID           int                `bson:"itineraryVarId"`
