@@ -263,14 +263,17 @@ func (g *AFSGenerator) expandMFSToAFS(mfs models.MasterFlight, flightDate time.T
 	var afsRecords []models.ActiveFlight
 
 	showSuffix := false
-	if airline, exists := g.configService.airlineByCode[mfs.FlightOwner]; exists {
+	airline, exists := g.configService.airlineByCode[mfs.FlightOwner]
+	if exists {
 		showSuffix = airline.ShowSuffix
 		log.WithFields(log.Fields{
 			"flightOwner": mfs.FlightOwner,
 			"showSuffix":  showSuffix,
+			"airlineID":   airline.ID.Hex(),
+			"airlineName": airline.Name,
 		}).Debug("Retrieved airline showSuffix setting")
 	} else {
-		log.WithField("flightOwner", mfs.FlightOwner).Warn("Airline not found in cache, defaulting showSuffix to false")
+		log.WithField("flightOwner", mfs.FlightOwner).Warn("Airline not found in cache")
 	}
 
 	for i, station := range mfs.Stations {

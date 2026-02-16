@@ -15,8 +15,8 @@ import (
 type ConfigService struct {
 	db                *Database
 	defaultConfig     *models.DefaultConfig
-	airlineConfigs    map[primitive.ObjectID]*models.AirlineConfig // Keyed by airline ID
-	airlineByCode     map[string]*models.Airline                   // Keyed by airline code (e.g., "MH")
+	airlineConfigs    map[primitive.ObjectID]*models.AirlineConfig
+	airlineByCode     map[string]*models.Airline
 	cacheLoadTime     time.Time
 	cacheTTL          time.Duration
 }
