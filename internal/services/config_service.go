@@ -66,7 +66,7 @@ func (cs *ConfigService) LoadConfigurations(ctx context.Context) error {
 
 // loadDefaultConfig loads the active default configuration
 func (cs *ConfigService) loadDefaultConfig(ctx context.Context) error {
-	collection := cs.db.GetCollection("default_config")
+	collection := cs.db.GetRefCollection("default_config")
 
 	filter := bson.M{"isActive": true}
 	
@@ -83,7 +83,7 @@ func (cs *ConfigService) loadDefaultConfig(ctx context.Context) error {
 
 // loadAirlines loads all active airlines
 func (cs *ConfigService) loadAirlines(ctx context.Context) error {
-	collection := cs.db.GetCollection("airlines")
+	collection := cs.db.GetRefCollection("airlines")
 
 	filter := bson.M{"isActive": true}
 	cursor, err := collection.Find(ctx, filter)
@@ -110,7 +110,7 @@ func (cs *ConfigService) loadAirlines(ctx context.Context) error {
 
 // loadAirlineConfigs loads all active airline-specific configurations
 func (cs *ConfigService) loadAirlineConfigs(ctx context.Context) error {
-	collection := cs.db.GetCollection("airline_config")
+	collection := cs.db.GetRefCollection("airline_config")
 
 	filter := bson.M{"isActive": true}
 	cursor, err := collection.Find(ctx, filter)

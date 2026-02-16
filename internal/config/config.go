@@ -9,7 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Config holds all application configuration
 type Config struct {
 	MongoDB    MongoDBConfig
 	API        APIConfig
@@ -23,6 +22,7 @@ type Config struct {
 type MongoDBConfig struct {
 	URI                    string
 	Database               string
+	ReferenceDatabase      string
 	MaxPoolSize            uint64
 	MinPoolSize            uint64
 	MaxConnIdleTime        time.Duration
@@ -68,8 +68,9 @@ func Load() (*Config, error) {
 
 	cfg := &Config{
 		MongoDB: MongoDBConfig{
-			URI:                    getEnv("MONGO_URI", "mongodb://localhost:27017/afs_db"),
+			URI:                    getEnv("MONGO_URI", "mongodb://localhost:27017"),
 			Database:               getEnv("MONGO_DATABASE", "afs_db"),
+			ReferenceDatabase:      getEnv("MONGO_REFERENCE_DATABASE", "master_reference"),
 			MaxPoolSize:            getEnvAsUint64("MONGO_MAX_POOL_SIZE", 10),
 			MinPoolSize:            getEnvAsUint64("MONGO_MIN_POOL_SIZE", 2),
 			MaxConnIdleTime:        getEnvAsDuration("MONGO_MAX_CONN_IDLE_TIME", 5*time.Minute),
@@ -107,10 +108,12 @@ func Load() (*Config, error) {
 	setupLogging(cfg.Logging)
 
 	log.WithFields(log.Fields{
-		"env":      cfg.App.Env,
-		"mongo":    cfg.MongoDB.URI,
-		"api":      cfg.API.Endpoint,
-		"schedule": cfg.Scheduler.CronSchedule,
+		"env":                cfg.App.Env,
+		"mongo_uri":          cfg.MongoDB.URI,
+		"afs_database":       cfg.MongoDB.Database,
+		"reference_database": cfg.MongoDB.ReferenceDatabase,  // ← ADD THIS
+		"api":                cfg.API.Endpoint,
+		"schedule":           cfg.Scheduler.CronSchedule,
 	}).Info("Configuration loaded")
 
 	return cfg, nil

@@ -13,9 +13,10 @@ import (
 
 // Database manages MongoDB connection and operations
 type Database struct {
-	client *mongo.Client
-	db     *mongo.Database
-	config *config.Config
+	client    *mongo.Client
+	afsDB     *mongo.Database
+	refDB     *mongo.Database
+	config    *config.Config
 }
 
 // NewDatabase creates a new database instance
@@ -47,11 +48,16 @@ func (d *Database) Connect(ctx context.Context) error {
 	}
 
 	d.client = client
-	d.db = client.Database(d.config.MongoDB.Database)
+	
 
-	log.WithField("database", d.config.MongoDB.Database).Info("MongoDB connected successfully")
+	d.afsDB = client.Database(d.config.MongoDB.Database)           // afs_db
+	d.refDB = client.Database(d.config.MongoDB.ReferenceDatabase)  // master_reference
 
-	// Setup indexes
+	log.WithFields(log.Fields{
+		"afs_database": d.config.MongoDB.Database,
+		"ref_database": d.config.MongoDB.ReferenceDatabase,
+	}).Info("MongoDB connected successfully")
+
 	if err := d.setupIndexes(ctx); err != nil {
 		log.WithError(err).Warn("Failed to setup some indexes")
 	}
@@ -63,7 +69,6 @@ func (d *Database) Connect(ctx context.Context) error {
 func (d *Database) setupIndexes(ctx context.Context) error {
 	log.Info("Setting up database indexes...")
 
-	// MFS Collection Indexes
 	mfsIndexes := []mongo.IndexModel{
 		{
 			Keys: bson.D{
@@ -84,12 +89,11 @@ func (d *Database) setupIndexes(ctx context.Context) error {
 		},
 	}
 
-	_, err := d.db.Collection("master_flights").Indexes().CreateMany(ctx, mfsIndexes)
+	_, err := d.afsDB.Collection("master_flights").Indexes().CreateMany(ctx, mfsIndexes)
 	if err != nil {
 		log.WithError(err).Warn("Failed to create MFS indexes")
 	}
 
-	// AFS Collection Indexes
 	afsIndexes := []mongo.IndexModel{
 		{
 			Keys: bson.D{
@@ -100,33 +104,85 @@ func (d *Database) setupIndexes(ctx context.Context) error {
 		{
 			Keys: bson.D{{Key: "deliveryStatus", Value: 1}},
 		},
-		// {
-		// 	Keys:    bson.D{{Key: "_id", Value: 1}},
-		// 	Options: options.Index().SetUnique(true),
-		// },
 		{
 			Keys:    bson.D{{Key: "expiresAt", Value: 1}},
 			Options: options.Index().SetExpireAfterSeconds(0), // TTL index
 		},
 	}
 
-	_, err = d.db.Collection("active_flights").Indexes().CreateMany(ctx, afsIndexes)
+	_, err = d.afsDB.Collection("active_flights").Indexes().CreateMany(ctx, afsIndexes)
 	if err != nil {
 		log.WithError(err).Warn("Failed to create AFS indexes")
+	}
+
+	// ===== MASTER_REFERENCE Indexes =====
+	
+	// Airlines Index (in master_reference)
+	airlineIndexes := []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "code", Value: 1}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bson.D{{Key: "isActive", Value: 1}},
+		},
+	}
+
+	_, err = d.refDB.Collection("airlines").Indexes().CreateMany(ctx, airlineIndexes)
+	if err != nil {
+		log.WithError(err).Warn("Failed to create airline indexes")
+	}
+
+	// Airports Index (in master_reference)
+	airportIndexes := []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "iataCode", Value: 1}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bson.D{{Key: "countryCode", Value: 1}},
+		},
+	}
+
+	_, err = d.refDB.Collection("iata_airports").Indexes().CreateMany(ctx, airportIndexes)
+	if err != nil {
+		log.WithError(err).Warn("Failed to create airport indexes")
 	}
 
 	log.Info("Database indexes setup completed")
 	return nil
 }
 
-// GetDB returns the database instance
-func (d *Database) GetDB() *mongo.Database {
-	return d.db
+// ===== AFS Database Methods =====
+
+// GetAFSDB returns the AFS database instance
+func (d *Database) GetAFSDB() *mongo.Database {
+	return d.afsDB
 }
 
-// GetCollection returns a collection
+// GetAFSCollection returns a collection from afs_db
+func (d *Database) GetAFSCollection(name string) *mongo.Collection {
+	return d.afsDB.Collection(name)
+}
+
+// ===== Reference Database Methods =====
+
+// GetRefDB returns the Reference database instance
+func (d *Database) GetRefDB() *mongo.Database {
+	return d.refDB
+}
+
+// GetRefCollection returns a collection from master_reference
+func (d *Database) GetRefCollection(name string) *mongo.Collection {
+	return d.refDB.Collection(name)
+}
+
+func (d *Database) GetDB() *mongo.Database {
+	return d.afsDB
+}
+
 func (d *Database) GetCollection(name string) *mongo.Collection {
-	return d.db.Collection(name)
+	return d.afsDB.Collection(name)
 }
 
 // Close closes the database connection

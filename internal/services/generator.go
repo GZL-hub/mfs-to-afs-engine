@@ -3,8 +3,6 @@ package services
 import (
 	"context"
 	"fmt"
-	"strings"
-	"time"
 	"github.com/mh-airlines/afs-engine/internal/config"
 	"github.com/mh-airlines/afs-engine/internal/models"
 	"github.com/mh-airlines/afs-engine/internal/utils"
@@ -12,6 +10,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"strings"
+	"time"
 )
 
 // AFSGenerator handles AFS generation from MFS
@@ -44,8 +44,8 @@ func (g *AFSGenerator) loadAirportCache(ctx context.Context) error {
 		return nil
 	}
 
-	collection := g.db.GetCollection("iata_airports")
-	
+	collection := g.db.GetRefCollection("iata_airports")
+
 	cursor, err := collection.Find(ctx, bson.M{"isActive": true})
 	if err != nil {
 		return fmt.Errorf("failed to query airports: %w", err)
@@ -248,13 +248,13 @@ func (g *AFSGenerator) attachCodeshares(ctx context.Context, mfsRecords []models
 // findMatchingCodeshares finds codeshares that match the given sector
 func (g *AFSGenerator) findMatchingCodeshares(codeshares []models.Codeshare, sector string) []string {
 	var matchingFlights []string
-	
+
 	for _, cs := range codeshares {
 		if cs.Sector == sector {
 			matchingFlights = append(matchingFlights, cs.CodeshareFlightNo...)
 		}
 	}
-	
+
 	return matchingFlights
 }
 
@@ -265,8 +265,8 @@ func (g *AFSGenerator) expandMFSToAFS(mfs models.MasterFlight, flightDate time.T
 	for i, station := range mfs.Stations {
 		// Only create AFS if this leg touches the homeStation
 		// Either departing from homeStation OR arriving at homeStation
-		if mfs.HomeStation == "" || 
-		   (station.DepartureStation != mfs.HomeStation && station.ArrivalStation != mfs.HomeStation) {
+		if mfs.HomeStation == "" ||
+			(station.DepartureStation != mfs.HomeStation && station.ArrivalStation != mfs.HomeStation) {
 			log.WithFields(log.Fields{
 				"flightNo":    mfs.FlightNo,
 				"homeStation": mfs.HomeStation,
@@ -284,7 +284,7 @@ func (g *AFSGenerator) expandMFSToAFS(mfs models.MasterFlight, flightDate time.T
 
 		// Build sector string for this leg
 		sector := fmt.Sprintf("%s %s", station.DepartureStation, station.ArrivalStation)
-		
+
 		// Find matching codeshare flights for this leg
 		codeshareFlights := g.findMatchingCodeshares(mfs.Codeshares, sector)
 
@@ -380,10 +380,10 @@ func (g *AFSGenerator) upsertAFS(ctx context.Context, afs models.ActiveFlight) e
 	collection := g.db.GetCollection("active_flights")
 
 	filter := bson.M{"_id": afs.ID}
-	
+
 	stdFormatted := formatTimeToHHMM(afs.STD)
 	staFormatted := formatTimeToHHMM(afs.STA)
-	
+
 	update := bson.M{
 		"$set": bson.M{
 			"flightNo":                 afs.FlightNo,
@@ -453,7 +453,6 @@ func (g *AFSGenerator) GetAFSForDelivery(ctx context.Context, flightDate time.Ti
 	return records, nil
 }
 
-// UpdateDeliveryStatus updates delivery status for AFS records
 func (g *AFSGenerator) UpdateDeliveryStatus(ctx context.Context, afsIDs []primitive.ObjectID, status string, additionalData bson.M) error {
 	collection := g.db.GetCollection("active_flights")
 
@@ -467,7 +466,6 @@ func (g *AFSGenerator) UpdateDeliveryStatus(ctx context.Context, afsIDs []primit
 		"$inc": bson.M{"deliveryAttempts": 1},
 	}
 
-	// Merge additional data
 	if additionalData != nil {
 		for k, v := range additionalData {
 			update["$set"].(bson.M)[k] = v
