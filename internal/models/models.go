@@ -6,7 +6,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// MasterFlight represents the Master Flight Schedule record
 type MasterFlight struct {
 	ID                primitive.ObjectID `bson:"_id,omitempty"`
 	CreationDate      time.Time          `bson:"creationDate"`
@@ -29,10 +28,9 @@ type MasterFlight struct {
 	IsAdhoc           bool               `bson:"isAdhoc"`
 	HomeStation       string             `bson:"homeStation"`
 	SourceTracking    SourceTracking     `bson:"sourceTracking"`
-	Codeshares        []Codeshare        `bson:"-"` // Not stored in MFS, populated from codeshares collection
+	Codeshares        []Codeshare        `bson:"-"`
 }
 
-// Codeshare represents a codeshare flight record
 type Codeshare struct {
 	ID                primitive.ObjectID `bson:"_id,omitempty"`
 	MasterFlightRef   primitive.ObjectID `bson:"masterflightRef"`
@@ -99,6 +97,7 @@ type ActiveFlight struct {
 	FlightNo                 string             `bson:"flightNo"`
 	FlightOwner              string             `bson:"flightOwner"`
 	OperationalSuffix        string             `bson:"operationalSuffix"`
+	ShowSuffix				bool                `bson:"showSuffix"`
 	FlightDate               time.Time          `bson:"flightDate"`
 	LegSequence              int                `bson:"legSequence"`
 	DepartureStation         string             `bson:"departureStation"`
@@ -117,14 +116,11 @@ type ActiveFlight struct {
 	AircraftConfiguration    string             `bson:"aircraftConfiguration"`
 	ServiceType              string             `bson:"serviceType"`
 	OnwardFlight             string             `bson:"onwardFlight"`
-	CodeshareFlights         []string           `bson:"codeshareFlights,omitempty"` // Array of codeshare flight numbers
-	HomeStation              string             `bson:"homeStation"`                // The home station this AFS record belongs to
-	MovementType             string             `bson:"movementType"`               // "ARRIVAL" or "DEPARTURE" relative to homeStation
-	CategoryCode             string             `bson:"categoryCode"`               // "I" for International, "D" for Domestic
-	
-	// Operational timings - embedded struct
-	OperationalTimings       OperationalTimings `bson:"operationalTimings,omitempty"` // Check-in and gate timings
-	
+	CodeshareFlights         []string           `bson:"codeshareFlights,omitempty"`
+	HomeStation              string             `bson:"homeStation"`
+	MovementType             string             `bson:"movementType"`
+	CategoryCode             string             `bson:"categoryCode"`
+	OperationalTimings       OperationalTimings `bson:"operationalTimings,omitempty"`
 	SourceMFSID              primitive.ObjectID `bson:"sourceMFSId"`
 	SeasonID                 string             `bson:"seasonId"`
 	ItineraryVarID           int                `bson:"itineraryVarId"`
@@ -135,25 +131,23 @@ type ActiveFlight struct {
 	APIResponse              *APIResponse       `bson:"apiResponse,omitempty"`
 	LastErrorMessage         string             `bson:"lastErrorMessage,omitempty"`
 	LastErrorAt              *time.Time         `bson:"lastErrorAt,omitempty"`
-	ExpiresAt                time.Time          `bson:"expiresAt"` // TTL
+	ExpiresAt                time.Time          `bson:"expiresAt"`
 	CreatedAt                time.Time          `bson:"createdAt"`
 	UpdatedAt                time.Time          `bson:"updatedAt"`
 }
 
-// OperationalTimings represents calculated operational timings for a flight
 type OperationalTimings struct {
 	// Check-in timings
-	SchOpenTimeC  string `bson:"schOpenTimeC,omitempty" json:"schOpenTimeC,omitempty"`   // Scheduled Open Time for CheckIn (YYYYMMDDHHmm)
-	SchCloseTimeC string `bson:"schCloseTimeC,omitempty" json:"schCloseTimeC,omitempty"` // Scheduled Close Time for CheckIn (YYYYMMDDHHmm)
+	SchOpenTimeC  string `bson:"schOpenTimeC,omitempty" json:"schOpenTimeC,omitempty"`
+	SchCloseTimeC string `bson:"schCloseTimeC,omitempty" json:"schCloseTimeC,omitempty"`
 	
 	// Gate timings
-	SchOpenTimeL  string `bson:"schOpenTimeL,omitempty" json:"schOpenTimeL,omitempty"`   // Scheduled Open Time for gate (YYYYMMDDHHmm)
-	SchCloseTimeL string `bson:"schCloseTimeL,omitempty" json:"schCloseTimeL,omitempty"` // Scheduled Close Time for gate (YYYYMMDDHHmm)
-	SchBoardTimeL string `bson:"schBoardTimeL,omitempty" json:"schBoardTimeL,omitempty"` // Scheduled Boarding Time for Lounge (YYYYMMDDHHmm)
-	SchFCTimeL    string `bson:"schFcTimeL,omitempty" json:"schFcTimeL,omitempty"`       // Scheduled Final Call Time (YYYYMMDDHHmm)
+	SchOpenTimeL  string `bson:"schOpenTimeL,omitempty" json:"schOpenTimeL,omitempty"`
+	SchCloseTimeL string `bson:"schCloseTimeL,omitempty" json:"schCloseTimeL,omitempty"`
+	SchBoardTimeL string `bson:"schBoardTimeL,omitempty" json:"schBoardTimeL,omitempty"`
+	SchFCTimeL    string `bson:"schFcTimeL,omitempty" json:"schFcTimeL,omitempty"`
 }
 
-// APIResponse stores the API delivery response
 type APIResponse struct {
 	StatusCode int       `bson:"statusCode"`
 	Message    string    `bson:"message"`
@@ -163,7 +157,6 @@ type APIResponse struct {
 	Errors     []string  `bson:"errors,omitempty"`
 }
 
-// GenerationStats tracks AFS generation statistics
 type GenerationStats struct {
 	MFSRecordsQueried   int           `json:"mfsRecordsQueried"`
 	AFSRecordsGenerated int           `json:"afsRecordsGenerated"`

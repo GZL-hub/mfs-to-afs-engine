@@ -10,21 +10,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// JSONTransformer transforms AFS records to JSON
 type JSONTransformer struct{}
 
-// NewJSONTransformer creates a new JSON transformer
 func NewJSONTransformer() *JSONTransformer {
 	return &JSONTransformer{}
 }
 
-// JSONFIDASM represents the root JSON structure for FIDASM1 format
 type JSONFIDASM struct {
 	Header  HeaderJSON    `json:"header"`
 	PayLoad []PayLoadJSON `json:"payload"`
 }
 
-// HeaderJSON represents the message header
 type HeaderJSON struct {
 	MsgCode     string `json:"msgCode"`
 	MsgSubtype  string `json:"msgSubtype"`
@@ -36,61 +32,59 @@ type HeaderJSON struct {
 	MsgTimeSent string `json:"msgTimeSent"`
 }
 
-// PayLoadJSON represents a single flight payload
 type PayLoadJSON struct {
-	Header              string   `json:"header"`
-	ActionCode          string   `json:"actionCode"`
-	AFSkey              string   `json:"afsKey"`
-	FlightNo            string   `json:"flightNo"`
-	Leg                 string   `json:"leg"`
-	STAD                string   `json:"stad"`
-	OfficialFlightDate  string   `json:"officialFlightDate"`
-	AircraftType        string   `json:"aircraftType"`
-	ServiceClass        string   `json:"serviceClass"`
-	AircraftOperator    string   `json:"aircraftOperator"`
-	ServiceTypeCode     string   `json:"serviceTypeCode"`
-	CodeShareFlight     []string `json:"codeShareFlight"`
-	FlightMode          string   `json:"flightMode"`
-	ModeSequence        string   `json:"modeSequence"`
-	CategoryCode        string   `json:"categoryCode"`
-	Station1            string   `json:"station1"`
-	Station2            string   `json:"station2"`
-	Station3            string   `json:"station3"`
-	Station4            string   `json:"station4"`
-	Station5            string   `json:"station5"`
-	Station6            string   `json:"station6"`
-	STD1                string   `json:"std1"`
-	STD2                string   `json:"std2"`
-	STD3                string   `json:"std3"`
-	STD4                string   `json:"std4"`
-	STD5                string   `json:"std5"`
-	STA2                string   `json:"sta2"`
-	STA3                string   `json:"sta3"`
-	STA4                string   `json:"sta4"`
-	STA5                string   `json:"sta5"`
-	STA6                string   `json:"sta6"`
-	SpFIndicator        string   `json:"spfIndicator"`
-	SchOpenTimeC        string   `json:"schOpenTimeC"`
-	SchCloseTimeC       string   `json:"schCloseTimeC"`
-	SchOpenTimeL        string   `json:"schOpenTimeL"`
-	SchCloseTimeL       string   `json:"schCloseTimeL"`
-	SchBoardTimeL       string   `json:"schBoardTimeL"`
-	SchFCTimeL          string   `json:"schFcTimeL"`
-	StandCode           string   `json:"standCode"`
-	LoungeCode          string   `json:"loungeCode"`
-	AcftRegnNo          string   `json:"acftRegnNo"`
-	Memo                string   `json:"memo"`
-	TerminalID          string   `json:"terminalId"`
-	SuffixDisp          string   `json:"suffixDisp"`
-	CheckInType         string   `json:"checkInType"`
-	IslandsAlloc        string   `json:"islandsAlloc"`
-	DeskAlloc           string   `json:"deskAlloc"`
-	IslandStatus        string   `json:"islandStatus"`
-	ActIslandOpenTime   string   `json:"actIslandOpenTime"`
-	ActIslandCloseTime  string   `json:"actIslandCloseTime"`
+	Header             string   `json:"header"`
+	ActionCode         string   `json:"actionCode"`
+	AFSkey             string   `json:"afsKey"`
+	FlightNo           string   `json:"flightNo"`
+	Leg                string   `json:"leg"`
+	STAD               string   `json:"stad"`
+	OfficialFlightDate string   `json:"officialFlightDate"`
+	AircraftType       string   `json:"aircraftType"`
+	ServiceClass       string   `json:"serviceClass"`
+	AircraftOperator   string   `json:"aircraftOperator"`
+	ServiceTypeCode    string   `json:"serviceTypeCode"`
+	CodeShareFlight    []string `json:"codeShareFlight"`
+	FlightMode         string   `json:"flightMode"`
+	ModeSequence       string   `json:"modeSequence"`
+	CategoryCode       string   `json:"categoryCode"`
+	Station1           string   `json:"station1"`
+	Station2           string   `json:"station2"`
+	Station3           string   `json:"station3"`
+	Station4           string   `json:"station4"`
+	Station5           string   `json:"station5"`
+	Station6           string   `json:"station6"`
+	STD1               string   `json:"std1"`
+	STD2               string   `json:"std2"`
+	STD3               string   `json:"std3"`
+	STD4               string   `json:"std4"`
+	STD5               string   `json:"std5"`
+	STA2               string   `json:"sta2"`
+	STA3               string   `json:"sta3"`
+	STA4               string   `json:"sta4"`
+	STA5               string   `json:"sta5"`
+	STA6               string   `json:"sta6"`
+	SpFIndicator       string   `json:"spfIndicator"`
+	SchOpenTimeC       string   `json:"schOpenTimeC"`
+	SchCloseTimeC      string   `json:"schCloseTimeC"`
+	SchOpenTimeL       string   `json:"schOpenTimeL"`
+	SchCloseTimeL      string   `json:"schCloseTimeL"`
+	SchBoardTimeL      string   `json:"schBoardTimeL"`
+	SchFCTimeL         string   `json:"schFcTimeL"`
+	StandCode          string   `json:"standCode"`
+	LoungeCode         string   `json:"loungeCode"`
+	AcftRegnNo         string   `json:"acftRegnNo"`
+	Memo               string   `json:"memo"`
+	TerminalID         string   `json:"terminalId"`
+	SuffixDisp         string   `json:"suffixDisp"`
+	CheckInType        string   `json:"checkInType"`
+	IslandsAlloc       string   `json:"islandsAlloc"`
+	DeskAlloc          string   `json:"deskAlloc"`
+	IslandStatus       string   `json:"islandStatus"`
+	ActIslandOpenTime  string   `json:"actIslandOpenTime"`
+	ActIslandCloseTime string   `json:"actIslandCloseTime"`
 }
 
-// TransformToJSON transforms AFS records to FIDASM1 JSON format
 func (t *JSONTransformer) TransformToJSON(afsRecords []models.ActiveFlight, batchID string) (string, error) {
 	log.WithFields(log.Fields{
 		"recordCount": len(afsRecords),
@@ -102,7 +96,6 @@ func (t *JSONTransformer) TransformToJSON(afsRecords []models.ActiveFlight, batc
 		payloads[i] = t.transformFlight(afs)
 	}
 
-	// Format timestamp as YYYYMMDDHHmmss
 	msgTimeSent := time.Now().Format("20060102150405")
 
 	jsonDoc := JSONFIDASM{
@@ -119,7 +112,6 @@ func (t *JSONTransformer) TransformToJSON(afsRecords []models.ActiveFlight, batc
 		PayLoad: payloads,
 	}
 
-	// Marshal to JSON with indentation
 	output, err := json.MarshalIndent(jsonDoc, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal JSON: %w", err)
@@ -136,10 +128,7 @@ func (t *JSONTransformer) transformFlight(afs models.ActiveFlight) PayLoadJSON {
 		if dateStr == "" || timeStr == "" {
 			return ""
 		}
-		// Assuming date format is YYYY-MM-DD and time format is HH:mm
-		// Combine and format to YYYYMMDDHHmm
 		combined := dateStr + timeStr
-		// Remove any separators
 		formatted := ""
 		for _, char := range combined {
 			if char >= '0' && char <= '9' {
@@ -149,7 +138,6 @@ func (t *JSONTransformer) transformFlight(afs models.ActiveFlight) PayLoadJSON {
 		return formatted
 	}
 
-	// Determine Leg value based on movementType
 	legValue := ""
 	switch afs.MovementType {
 	case "DEPARTURE":
@@ -157,40 +145,32 @@ func (t *JSONTransformer) transformFlight(afs models.ActiveFlight) PayLoadJSON {
 	case "ARRIVAL":
 		legValue = "A"
 	default:
-		// Fallback to legacy logic if movementType is not set
-		legValue = string(afs.LegSequence + 64) // Convert 1->A, 2->B, etc.
+		legValue = string(afs.LegSequence + 64)
 	}
 
-	// Helper to format flight date/time
-	// STAD depends on homeStation:
-	// - If arrival at homeStation: use arrival date/time (STA)
-	// - If departure from homeStation: use departure date/time (STD)
 	var stad string
 	if afs.MovementType == "ARRIVAL" {
-		// Arrival at homeStation - use STA
 		stad = formatTimestamp(utils.FormatDate(afs.FlightDate), afs.STA)
 	} else {
-		// Departure from homeStation - use STD
 		stad = formatTimestamp(utils.FormatDate(afs.FlightDate), afs.STD)
 	}
-	
-	// officialFlightDate ALWAYS uses departure date/time (STD)
+
 	officialFlightDate := formatTimestamp(utils.FormatDate(afs.FlightDate), afs.STD)
-	
 	std1 := formatTimestamp(utils.FormatDate(afs.FlightDate), afs.STD)
 	sta2 := formatTimestamp(utils.FormatDate(afs.FlightDate), afs.STA)
 
-	// Codeshare flights as array
 	codeshareFlights := []string{}
 	if len(afs.CodeshareFlights) > 0 {
 		codeshareFlights = afs.CodeshareFlights
 	}
 
-	// Use CategoryCode from AFS record, default to "I" if not set
 	categoryCode := afs.CategoryCode
-
-	// Use operational timings from AFS record (will be populated for departures only)
 	timings := afs.OperationalTimings
+
+	suffixDisp := "N"
+	if afs.OperationalSuffix != "" && afs.ShowSuffix {
+		suffixDisp = "Y"
+	}
 
 	return PayLoadJSON{
 		Header:             "AFS",
@@ -201,7 +181,7 @@ func (t *JSONTransformer) transformFlight(afs models.ActiveFlight) PayLoadJSON {
 		STAD:               stad,
 		OfficialFlightDate: officialFlightDate,
 		AircraftType:       afs.AircraftType,
-		ServiceClass:       "",   // Need to find out how to fill up this field
+		ServiceClass:       "",
 		AircraftOperator:   afs.FlightOwner,
 		ServiceTypeCode:    afs.ServiceType,
 		CodeShareFlight:    codeshareFlights,
@@ -236,8 +216,8 @@ func (t *JSONTransformer) transformFlight(afs models.ActiveFlight) PayLoadJSON {
 		AcftRegnNo:         afs.TailNo,
 		Memo:               "",
 		TerminalID:         afs.PassengerTerminalDep,
-		SuffixDisp:         "N",
-		CheckInType:        "C", // Need to find out how to fill up this field
+		SuffixDisp:         suffixDisp,
+		CheckInType:        "C",
 		IslandsAlloc:       "",
 		DeskAlloc:          "",
 		IslandStatus:       "",
@@ -246,7 +226,6 @@ func (t *JSONTransformer) transformFlight(afs models.ActiveFlight) PayLoadJSON {
 	}
 }
 
-// CreateManifest creates batch manifest metadata
 func (t *JSONTransformer) CreateManifest(batchID string, afsRecords []models.ActiveFlight, apiResponse *models.APIResponse) map[string]interface{} {
 	flightIDs := make([]string, len(afsRecords))
 	for i, afs := range afsRecords {

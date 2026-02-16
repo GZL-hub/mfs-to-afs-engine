@@ -262,6 +262,17 @@ func (g *AFSGenerator) findMatchingCodeshares(codeshares []models.Codeshare, sec
 func (g *AFSGenerator) expandMFSToAFS(mfs models.MasterFlight, flightDate time.Time) []models.ActiveFlight {
 	var afsRecords []models.ActiveFlight
 
+	showSuffix := false
+	if airline, exists := g.configService.airlineByCode[mfs.FlightOwner]; exists {
+		showSuffix = airline.ShowSuffix
+		log.WithFields(log.Fields{
+			"flightOwner": mfs.FlightOwner,
+			"showSuffix":  showSuffix,
+		}).Debug("Retrieved airline showSuffix setting")
+	} else {
+		log.WithField("flightOwner", mfs.FlightOwner).Warn("Airline not found in cache, defaulting showSuffix to false")
+	}
+
 	for i, station := range mfs.Stations {
 		// Only create AFS if this leg touches the homeStation
 		// Either departing from homeStation OR arriving at homeStation
@@ -325,6 +336,7 @@ func (g *AFSGenerator) expandMFSToAFS(mfs models.MasterFlight, flightDate time.T
 			FlightNo:                 mfs.FlightNo,
 			FlightOwner:              mfs.FlightOwner,
 			OperationalSuffix:        mfs.OperationalSuffix,
+			ShowSuffix:               showSuffix, // ← ADD THIS
 			FlightDate:               flightDate,
 			LegSequence:              i + 1,
 			DepartureStation:         station.DepartureStation,
@@ -365,6 +377,7 @@ func (g *AFSGenerator) expandMFSToAFS(mfs models.MasterFlight, flightDate time.T
 			"arrival":      station.ArrivalStation,
 			"movementType": movementType,
 			"categoryCode": categoryCode,
+			"showSuffix":   showSuffix, // ← ADD THIS
 			"hasTimings":   opTimings.SchOpenTimeC != "",
 			"legSeq":       i + 1,
 		}).Debug("Created AFS record for homeStation leg")
@@ -389,6 +402,7 @@ func (g *AFSGenerator) upsertAFS(ctx context.Context, afs models.ActiveFlight) e
 			"flightNo":                 afs.FlightNo,
 			"flightOwner":              afs.FlightOwner,
 			"operationalSuffix":        afs.OperationalSuffix,
+			"showSuffix":               afs.ShowSuffix, // ← ADD THIS
 			"flightDate":               afs.FlightDate,
 			"legSequence":              afs.LegSequence,
 			"departureStation":         afs.DepartureStation,
