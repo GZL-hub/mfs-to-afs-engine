@@ -141,7 +141,7 @@ services:
     ports:
       - "3001:3001"
     volumes:
-      - ~/Downloads/fidasm-sent:/app/downloads
+      - ~/Downloads/fidasm-received:/app/downloads
     networks:
       - afs-network
     restart: unless-stopped
