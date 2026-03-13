@@ -326,10 +326,9 @@ func (g *AFSGenerator) findMatchingCodeshares(codeshares []models.Codeshare, sec
 }
 
 // expandMFSToAFS expands MFS record into AFS records (one per leg that touches homeStation).
-// baseDate is the UTC operating day; localDate is the local operating day (targetDate).
-// Times are converted from UTC to local using each station's UTC offset.
+// baseDate is the UTC operating day used as flightDate; times remain in UTC for downstream compatibility.
 func (g *AFSGenerator) expandMFSToAFS(mfs models.MasterFlight, baseDate time.Time, localDate time.Time) []models.ActiveFlight {
-	flightDate := localDate
+	flightDate := baseDate
 	var afsRecords []models.ActiveFlight
 
 	showSuffix := false
@@ -380,29 +379,15 @@ func (g *AFSGenerator) expandMFSToAFS(mfs models.MasterFlight, baseDate time.Tim
 			movementType = "ARRIVAL"
 		}
 
-		// Convert UTC times to local times using each station's UTC offset
-		localDateOffset := utils.CalculateLocalDateOffset(
-			mfs.Stations[0].STD,
-			mfs.Stations[0].UTCLocalTimeVariationDep,
-		)
-		localSTD, localCD := utils.ConvertUTCToLocal(
-			station.STD, station.CD,
-			station.UTCLocalTimeVariationDep, localDateOffset,
-		)
-		localSTA, localCA := utils.ConvertUTCToLocal(
-			station.STA, station.CA,
-			station.UTCLocalTimeVariationArr, localDateOffset,
-		)
-
 		// Determine category code (International/Domestic)
 		categoryCode := g.determineCategoryCode(station.DepartureStation, station.ArrivalStation)
 
-		// Calculate operational timings (only for departures) using local STD
+		// Calculate operational timings (only for departures) using UTC STD
 		var opTimings models.OperationalTimings
 		if movementType == "DEPARTURE" {
 			timings, err := g.configService.CalculateOperationalTimings(
 				flightDate,
-				localSTD,
+				station.STD,
 				mfs.FlightOwner,
 				categoryCode,
 				movementType,
@@ -411,7 +396,7 @@ func (g *AFSGenerator) expandMFSToAFS(mfs models.MasterFlight, baseDate time.Tim
 				log.WithError(err).WithFields(log.Fields{
 					"flightNo":   mfs.FlightNo,
 					"flightDate": flightDate,
-					"std":        localSTD,
+					"std":        station.STD,
 				}).Warn("Failed to calculate operational timings")
 			} else if timings != nil {
 				opTimings = *timings
@@ -430,12 +415,12 @@ func (g *AFSGenerator) expandMFSToAFS(mfs models.MasterFlight, baseDate time.Tim
 			ArrivalStation:           station.ArrivalStation,
 			PassengerTerminalDep:     station.PassengerTerminalDep,
 			PassengerTerminalArr:     station.PassengerTerminalArr,
-			STD:                      localSTD,
-			STA:                      localSTA,
+			STD:                      station.STD,
+			STA:                      station.STA,
 			UTCLocalTimeVariationDep: station.UTCLocalTimeVariationDep,
 			UTCLocalTimeVariationArr: station.UTCLocalTimeVariationArr,
-			DayChangeDeparture:       localCD,
-			DayChangeArrival:         localCA,
+			DayChangeDeparture:       station.CD,
+			DayChangeArrival:         station.CA,
 			AircraftType:             station.IATASubTypeCode,
 			AircraftOwner:            station.AircraftOwner,
 			TailNo:                   station.TailNo,
